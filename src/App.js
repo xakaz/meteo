@@ -6,10 +6,22 @@ import Title from "./Components/Title";
 import { useDispatch, useSelector } from "react-redux";
 import { setCity } from "./store/Slices/citySlice";
 import Footer from "./Footer/Footer";
+import Card from "./Containers/Card";
+import CityCountry from "./Components/CityCountry";
 
 function App() {
   const [meteoData, setMeteoData] = useState();
-  const [newCity, setNewCity] = useState("");
+  const [newCity, setNewCity] = useState();
+
+  const day = [
+    "Dimanche",
+    "Lundi",
+    "Mardi",
+    "Mercredi",
+    "Jeudi",
+    "Vendredi",
+    "Samedi",
+  ];
 
   /** STORE */
   const cityStore = useSelector((store) => store.CITY.city);
@@ -20,11 +32,11 @@ function App() {
     const fetchData = async () => {
       await axios
         .get(
-          "https://api.weatherapi.com/v1/current.json?key=" +
+          "https://api.weatherapi.com/v1/forecast.json?key=" +
             process.env.REACT_APP_API_KEY +
             "&q=" +
             cityStore +
-            "&lang=fr"
+            "&lang=fr&days=5&aqi=no&alerts=no"
         )
         .then((response) => {
           setMeteoData(response.data);
@@ -34,41 +46,74 @@ function App() {
         });
     };
 
-    setTimeout(() => {
-      fetchData();
-    }, 500);
+    fetchData();
   }, [cityStore]);
 
-  const changeCity = () => {
+  const changeCity = (e) => {
+    e.preventDefault();
     dispatch(setCity(newCity));
   };
 
   return (
-    <div className="bg-slate-900 h-screen flex flex-col justify-center items-center text-white">
-      <Title title="Ma météo" />
-      <Input
-        onChangeInput={(e) => setNewCity(e.target.value)}
-        changeCity={changeCity}
-      />
-      {meteoData ? (
-        <div className="h-fit w-60 flex flex-col justify-evenly items-center rounded py-8">
-          <img
-            src={meteoData.current.condition.icon}
-            alt={meteoData.current.condition.text + " icon"}
-            className="h-20 "
-          />
-          <div className="text-center">
-            <h2 className="text-6xl">{meteoData.current.temp_c}°C</h2>
-            <p>{meteoData.current.condition.text}</p>
+    <div className=" h-screen flex flex-col items-center text-white bg-slate-900 ">
+      {/**  TITLE */}
+      <Title title="WatDaWaza?" />
+
+      <section className="w-full flex flex-col justify-center items-center">
+
+        {/**  INPUT */}
+        <Input
+          onChangeInput={(e) => setNewCity(e.target.value)}
+          changeCity={(e) => changeCity(e)}
+        />
+
+        {meteoData ? (
+          <>
+            {/** CITY & COUNTRY*/}
+            <CityCountry
+              name={meteoData.location.name}
+              country={meteoData.location.country}
+              region={meteoData.location.region}
+            />
+
+            {/**  CARDS */}
+            <div className="flex space-x-8">
+              {meteoData.forecast.forecastday.map((data, i) => {
+                console.log(i);
+                return (
+                  <Card
+                    key={data.date_epoch}
+                    dayOfTheWeek={day[
+                      new Date(data.date).getDay()
+                    ].toUpperCase()}
+                    localtime={data.date}
+                    icon={data.day.condition.icon}
+                    text={data.day.condition.text}
+                    temp_c={
+                      data.date === meteoData.location.localtime.slice(0, 10)
+                        ? Math.round(meteoData.current.temp_c)
+                        : Math.round(data.day.avgtemp_c)
+                    }
+                    mintemp_c={Math.round(data.day.mintemp_c)}
+                    maxtemp_c={Math.round(data.day.maxtemp_c)}
+                    temp_text_size={"text-4xl"}
+                    mintemp_text_size={"text-xl"}
+                    maxtemp_text_size={"text-xl"}
+                    sunrise={data.astro.sunrise}
+                    sunset={data.astro.sunset}
+                  />
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="animate-pulse text-5xl text-slate-300">
+            Loading...
           </div>
-          <div className="text-center">
-            <h3 className="text-4xl">{meteoData.location.name}</h3>
-            <h4 className="text-xl">{meteoData.location.country}</h4>
-          </div>
-        </div>
-      ) : (
-        <div className="animate-pulse text-5xl text-slate-300">Loading...</div>
-      )}
+        )}
+      </section>
+
+      {/**  FOOTER  */}
       <Footer />
     </div>
   );
