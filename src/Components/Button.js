@@ -7,6 +7,8 @@ function Button(props) {
         props.textColor +
         " " +
         props.bgColor
+        + " hover:"+
+        props.textHover
       }
     >
       {props.name}
